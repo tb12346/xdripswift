@@ -26,7 +26,7 @@ For every research pass, capture:
 
 | # | Research area | Status | Main decision |
 |---|---|---|---|
-| 01 | xDrip upstream PR + issue archaeology | Not started | What existing alert, snooze, logging, widget and Watch work can we reuse? |
+| 01 | [xDrip upstream PR + issue archaeology](./01-xdrip-upstream.md) | **Complete** | What existing alert, snooze, logging, widget and Watch work can we reuse? |
 | 02 | V7 readiness + migration path | Not started | Stable 6.x, V7, or a deliberately portable hybrid? |
 | 03 | Other diabetes apps: attention + alert patterns | Not started | What should we borrow from Loop, Trio/iAPS, AAPS, xDrip+ and related tools? |
 | 04 | Low-friction meal/treatment logging on iOS | Not started | What is the fastest reliable way to log Ate, insulin and acknowledgements? |
@@ -52,9 +52,15 @@ The first fork scan found that most forks are snapshots, upstream syncs, or buil
 - **Paul Plant calibration-assistant experiment** — useful interaction pattern: turn multiple noisy glucose/context signals into a simple recommendation rather than making the user interpret all inputs manually.
 - No scanned fork appeared to implement the intended core Attention Engine: unresolved meal state + action awareness + glucose trajectory + adaptive escalation/snoozing + explicit user acknowledgement.
 
+### 01 — xDrip upstream archaeology
+
+Upstream already has most of the delivery and data primitives we need: mature alarms and snoozing, contextual Fast Rise/Drop gates, rich notifications, treatment storage/sync, Home Screen Quick Actions and App Intent/Siri precedent. The important missing layer is **persistent episode context** — knowing that the user ate, acted, deliberately deferred action, or is already handling a situation.
+
+The main architectural consequence is that our Attention Engine should sit above/beside xDrip's existing alert machinery rather than replacing it. It should evaluate an Attention Episode and decide whether to remain quiet, remind, escalate or resolve, while reusing existing notification infrastructure. See [01-xdrip-upstream.md](./01-xdrip-upstream.md).
+
 ### V7
 
-V7 is active development on Paul Plant's fork rather than the current main upstream release line. It is useful to study, but should not yet be assumed to be a stable sole foundation. A promising strategy is to keep new domain logic portable so it can start on stable 6.x if needed and migrate to V7 later without being rewritten.
+V7 is active development and is useful to study, but should not yet be assumed to be a stable sole foundation. A promising strategy is to keep new domain logic portable so it can start on stable 6.x if needed and migrate to V7 later without being rewritten. Research pass 02 will make this decision more concrete.
 
 ## Working product hypothesis
 
