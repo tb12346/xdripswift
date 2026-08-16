@@ -33,8 +33,8 @@ For every research pass, capture:
 | 05 | [iOS notification + background constraints](./05-ios-background-constraints.md) | **Complete** | What attention-engine behaviours are actually possible on iPhone and Watch? |
 | 06 | [Historical replay + backtesting](./06-historical-replay.md) | **Complete** | How can we tune alert logic against real historical CGM/treatment data? |
 | 07 | [Nightscout API + data storage](./07-nightscout-api-data.md) | **Complete** | What can Nightscout store, and which data should remain local? |
-| 08 | Insulin-on-board + carbs-on-board | **Next** | How early should approximate IOB/COB become part of context? |
-| 09 | Meal photo recognition + carb estimation | Not started | Open source, API, or multimodal model for a personal prototype? |
+| 08 | [Insulin-on-board + carbs-on-board](./08-iob-cob.md) | **Complete** | How early should approximate IOB/COB become part of context? |
+| 09 | Meal photo recognition + carb estimation | **Next** | Open source, API, or multimodal model for a personal prototype? |
 | 10 | Apple Health + Watch context | Not started | Which exercise, sleep, HR and activity signals are useful and accessible? |
 | 11 | Future personalised data model | Not started | What should we start recording from day one to support later learning? |
 | 12 | Prediction + personalisation approaches | Not started | What existing forecasting approaches are worth adapting later? |
@@ -128,6 +128,22 @@ Nightscout should be a **durable interoperability and history layer**, not the r
 - Raw health data, Nightscout exports and credentials stay out of Git.
 
 The practical split is: **standard diabetes facts sync to Nightscout; app-specific attention facts stay local and may be selectively mirrored when that creates real value.**
+
+### 08 — IOB + COB
+
+Approximate **IOB should enter the Attention Engine early; classical COB should be deferred.**
+
+- xDrip PR #366 already demonstrates a local pure-function exponential IOB calculation from existing insulin `TreatmentEntry` records. Rebuild the model cleanly for V7 rather than merging its old UIKit integration.
+- Current Loop continues to separate insulin remaining, insulin activity and glucose effect. For our use case, modeled IOB **plus current insulin activity/phase** is more useful than a single remaining-units number.
+- Trio's External Insulin workflow validates manually administered insulin entering IOB without pump delivery, which maps well to MDI.
+- Nightscout's existing BWP plugin already uses IOB to snooze/reassess high alerts when insulin is active — strong precedent for our “already acted” attention behaviour.
+- IOB must mean **modeled from recorded doses**, never proof of what was actually injected. Missing logs remain unknown.
+- V7's current treatment model stores insulin amount and time but not insulin subtype. Prefer one configured rapid-insulin action model initially rather than adding friction to every quick log; keep long-acting insulin separate.
+- Classical COB requires carb quantity, absorption assumptions, glucose response and therapy settings. That conflicts with the deliberately low-friction `Ate` action where carbs can be unknown.
+- Do not fabricate COB from `Ate`. Use meal recency/state first; add dynamic COB later only if carb-estimation and replay research show it materially improves attention decisions.
+- Historical replay should compare `time since insulin`, modeled IOB, and modeled IOB + activity to prove the extra complexity reduces unwanted nags without delaying genuinely useful attention.
+
+The practical rule is: **model recorded insulin early; preserve uncertainty around meals rather than forcing every meal into a precise COB number.**
 
 ## Working product hypothesis
 
