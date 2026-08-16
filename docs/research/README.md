@@ -30,8 +30,8 @@ For every research pass, capture:
 | 02 | [V7 readiness + migration path](./02-v7-readiness.md) | **Complete** | Stable 6.x, V7, or a deliberately portable hybrid? |
 | 03 | [Other diabetes apps: attention + alert patterns](./03-other-diabetes-apps.md) | **Complete** | What should we borrow from Loop, Trio/iAPS, AAPS, xDrip+ and related tools? |
 | 04 | [Low-friction meal/treatment logging on iOS](./04-low-friction-logging.md) | **Complete** | What is the fastest reliable way to log Ate, insulin and acknowledgements? |
-| 05 | iOS notification + background constraints | Not started | What attention-engine behaviours are actually possible on iPhone and Watch? |
-| 06 | Historical replay + backtesting | Not started | How can we tune alert logic against real historical CGM/treatment data? |
+| 05 | [iOS notification + background constraints](./05-ios-background-constraints.md) | **Complete** | What attention-engine behaviours are actually possible on iPhone and Watch? |
+| 06 | Historical replay + backtesting | **Next** | How can we tune alert logic against real historical CGM/treatment data? |
 | 07 | Insulin-on-board + carbs-on-board | Not started | How early should approximate IOB/COB become part of context? |
 | 08 | Meal photo recognition + carb estimation | Not started | Open source, API, or multimodal model for a personal prototype? |
 | 09 | Apple Health + Watch context | Not started | Which exercise, sleep, HR and activity signals are useful and accessible? |
@@ -79,6 +79,20 @@ The strongest interaction architecture is **one shared domain-action layer with 
 - V7 already has the core seams: App Intents, central notification handling, AlertManager actions, Watch notification UI and WidgetKit.
 
 A useful product challenge emerged: `Handling it` may be too vague to expose everywhere once more specific states exist (`insulin logged`, `no insulin needed`, `waiting for recovery`, `remind me`). Fewer, more meaningful actions should reduce cognitive load.
+
+### 05 — iOS background constraints
+
+The Attention Engine is technically viable on iOS **if it is event-driven rather than timer-driven**.
+
+- Fresh glucose should be the primary physiological re-evaluation clock.
+- Treatment logs, notification actions and app startup/reconciliation are additional triggers.
+- A time-based defer should persist its deadline and schedule an OS-owned local notification as a fallback, while every fresh glucose reading can resolve, retain or escalate the episode before that deadline.
+- Background refresh is discretionary and must not sit on the correctness path for real-time attention logic.
+- Direct Bluetooth CGM mode is promising because V7 declares `bluetooth-central`; follower modes have separate delivery characteristics and need independent qualification.
+- Stale/missing glucose is its own state and must never be interpreted as evidence that a prior rise/fall simply continued.
+- Attention Episode state must be persisted and evaluation must be idempotent across suspension, relaunch and duplicate callbacks.
+
+The key operating principle is: **react to fresh evidence, persist context, schedule conservative time guards, and never rely on periodic background execution.**
 
 ## Working product hypothesis
 
