@@ -35,8 +35,8 @@ For every research pass, capture:
 | 07 | [Nightscout API + data storage](./07-nightscout-api-data.md) | **Complete** | What can Nightscout store, and which data should remain local? |
 | 08 | [Insulin-on-board + carbs-on-board](./08-iob-cob.md) | **Complete** | How early should approximate IOB/COB become part of context? |
 | 09 | [Meal photo recognition + carb estimation](./09-meal-photo-carb-estimation.md) | **Complete** | Open source, API, or multimodal model for a personal prototype? |
-| 10 | Apple Health + Watch context | **Next** | Which exercise, sleep, HR and activity signals are useful and accessible? |
-| 11 | Future personalised data model | Not started | What should we start recording from day one to support later learning? |
+| 10 | [Apple Health + Watch context](./10-apple-health-watch-context.md) | **Complete** | Which exercise, sleep, HR and activity signals are useful and accessible? |
+| 11 | Future personalised data model | **Next** | What should we start recording from day one to support later learning? |
 | 12 | Prediction + personalisation approaches | Not started | What existing forecasting approaches are worth adapting later? |
 | 13 | Safety + failure modes | Not started | Where must the system become conservative or avoid false certainty? |
 | 14 | Personal-use deployment | Not started | How do we make builds easy to install, update and run alongside Zukka? |
@@ -46,121 +46,43 @@ For every research pass, capture:
 
 ### 01 — xDrip upstream archaeology
 
-xDrip already has most of the delivery and data primitives we need: mature alarms and snoozing, contextual Fast Rise/Drop gates, rich notifications, treatment storage/sync, Home Screen Quick Actions and App Intent/Siri precedent. The important missing layer is **persistent episode context** — knowing that the user ate, acted, deliberately deferred action, or is already handling a situation.
-
-The Attention Engine should sit above/beside xDrip's existing alert machinery rather than replacing it. It should evaluate an Attention Episode and decide whether to remain quiet, remind, escalate or resolve, while reusing existing notification infrastructure.
+xDrip already provides most of the delivery and data primitives: mature alarms/snoozing, treatment storage and sync, notification infrastructure, quick actions, App Intent/Siri precedent, widgets and Watch support. The missing layer is **persistent episode context** — knowing the user ate, acted, deliberately deferred action, or is already handling a situation. The Attention Engine should sit above/beside the existing alert machinery rather than replacing it.
 
 ### 02 — V7 readiness
 
-V7 should be the **preferred technical base after a short build/device qualification gate**. The key reason is architectural: `RootApplicationCoordinator` separates long-lived services from SwiftUI presentation, which gives the Attention Engine a much cleaner integration seam than the 6.x `RootViewController` architecture.
-
-The domain engine should still remain pure/testable behind protocols so that backend work can survive V7 churn or temporarily run in 6.x if qualification fails. Avoid investing in substantial 6.x UIKit/storyboard UI.
+V7 is the preferred base after a short real-device qualification gate. `RootApplicationCoordinator` gives a much cleaner service-integration seam than 6.x UIKit. Keep the Attention Engine pure/testable behind protocols so backend work survives V7 churn; avoid meaningful new 6.x UI investment.
 
 ### 03 — other diabetes apps
 
-The core product idea is differentiated, but many pieces already exist separately:
-
-- xDrip+ validates direction-aware smart snoozing and pre-emptive “already treated” suppression;
-- Loop validates separating meal state from insulin state and includes missed-meal detection;
-- Trio/iAPS validate unannounced-meal logic and treatment-state reasoning;
-- Trio explicitly supports external insulin entering IOB, highly relevant for MDI;
-- AAPS validates multi-signal context, short re-alert cycles and data-quality gating.
-
-The opportunity is not to invent new diabetes physiology, but to combine proven contextual signals into a simpler MDI-focused system whose job is **“does this need my attention?”** rather than automated dosing.
+The product idea is differentiated, but the physiology and mechanics are not novel: xDrip+ validates smart/direction-aware snoozing, Loop validates meal state independent of insulin, Trio/iAPS validate unannounced-meal and recovery contexts, and AAPS validates multi-signal contextual logic. Borrow those internals while keeping the user-facing question simple: **does this situation need attention now?**
 
 ### 04 — low-friction logging
 
-The strongest interaction architecture is **one shared domain-action layer with multiple system adapters**.
-
-- Proactive actions such as `Ate` and `Log insulin` should be App Intents.
-- Reactive actions should primarily live on the Attention notification itself.
-- Notification text-input actions can collect insulin amounts without opening the app and can also work via Apple Watch dictation.
-- iOS 18+ WidgetKit Controls are a better locked-phone one-tap surface for `Ate` than ordinary interactive widgets.
-- Ordinary widget/Live Activity buttons require authentication/unlock and cannot resolve missing parameters at tap time, making them weaker for arbitrary insulin entry.
-- V7 already has the core seams: App Intents, central notification handling, AlertManager actions, Watch notification UI and WidgetKit.
-
-A useful product challenge emerged: `Handling it` may be too vague to expose everywhere once more specific states exist (`insulin logged`, `no insulin needed`, `waiting for recovery`, `remind me`). Fewer, more meaningful actions should reduce cognitive load.
+Use one shared domain-action layer behind notification actions, App Intents, Controls, widgets, Watch and in-app UI. Notification actions are strongest for reactive actions; App Intents/Controls are strongest for proactive `Ate`. Arbitrary insulin entry is better via text-input notification/Siri than fixed-dose buttons. Keep actions structured and record source/provenance.
 
 ### 05 — iOS background constraints
 
-The Attention Engine is technically viable on iOS **if it is event-driven rather than timer-driven**.
-
-- Fresh glucose should be the primary physiological re-evaluation clock.
-- Treatment logs, notification actions and app startup/reconciliation are additional triggers.
-- A time-based defer should persist its deadline and schedule an OS-owned local notification as a fallback, while every fresh glucose reading can resolve, retain or escalate the episode before that deadline.
-- Background refresh is discretionary and must not sit on the correctness path for real-time attention logic.
-- Direct Bluetooth CGM mode is promising because V7 declares `bluetooth-central`; follower modes have separate delivery characteristics and need independent qualification.
-- Stale/missing glucose is its own state and must never be interpreted as evidence that a prior rise/fall simply continued.
-- Attention Episode state must be persisted and evaluation must be idempotent across suspension, relaunch and duplicate callbacks.
-
-The key operating principle is: **react to fresh evidence, persist context, schedule conservative time guards, and never rely on periodic background execution.**
+The Attention Engine is viable only as an **event-driven** system. Fresh glucose is the primary physiological clock; treatments, user actions and app reconciliation are additional triggers. Time-based defer should schedule an OS-owned local notification fallback while fresh readings can cancel/escalate earlier. Never depend on periodic background timers or treat stale glucose as continued trend.
 
 ### 06 — historical replay + backtesting
 
-Historical replay should test the **attention experience**, not merely glucose-prediction error. The right unit is a complete Attention Episode: when it begins, whether/when the user would be interrupted, how often alerts repeat, how treatment/context changes the policy, and how the episode resolves.
-
-- Build a deterministic discrete-event replay runner around the **same pure Swift Attention Engine used live**; do not maintain a second Python implementation of the rules.
-- Feed chronological glucose/treatment/user events plus synthetic policy deadlines into a fake clock and emit a full decision trace.
-- Score interruptions/day, repeats/episode, first-alert timing, post-treatment nags, silent recoveries, stale-data handling and other episode-level metrics.
-- Compare static/fixed-snooze and naive contextual baselines with the full Attention policy; later add IOB and signal ablations.
-- Optimise the trade-off between earlier useful attention and fewer interruptions rather than one “accuracy” score.
-- Use chronological/walk-forward tuning with a holdout period; avoid random time-series splits and brittle threshold overfitting.
-- Historical missing treatment records remain **unknown**, not proof no insulin was taken.
-- Nightscout and V7's selectable BG/treatment backup are viable data routes behind a normalisation layer.
-- Raw personal health history must stay out of Git; turn representative episodes into privacy-safe regression fixtures.
-- Replay can de-risk policy choices but cannot prove a counterfactual alert would improve TIR; that requires prospective use.
-
-A small manually reviewed set of historical episodes may be especially valuable because “I would have wanted attention here” is stronger ground truth for this product than glucose outcomes alone.
+Replay complete Attention Episodes, not just glucose predictions. Use the same pure Swift engine live and historically with a fake clock. Score interruptions/day, repeats/episode, first-alert timing, post-treatment nags, silent recoveries and stale-data behavior. Keep raw health history out of Git; store only aggregate results and synthetic/redacted fixtures. Replay selects policies but cannot prove counterfactual TIR improvement.
 
 ### 07 — Nightscout API + data storage
 
-Nightscout should be a **durable interoperability and history layer**, not the runtime source of truth for Attention Engine state.
-
-- Standard glucose, insulin and carb data should continue to use xDrip's existing `BgReading` / `TreatmentEntry` model and Nightscout `entries` / `treatments` sync.
-- Nightscout also has a `food` collection for reusable nutrition definitions and an `activity` collection for activity records, although activity currently sits outside the generic API v3 collection set.
-- Current Nightscout storage often preserves additional client fields, but arbitrary custom fields should not be treated as a stable cross-client protocol contract.
-- `Ate` with an unknown carb amount is meaningful data and must not be represented as `carbs = 0`; it should be a local `AttentionEvent` immediately, with a treatment added later if nutrition is confirmed.
-- `No insulin needed`, `Waiting for recovery`, reminder/defer actions, acknowledgements and Attention Episode lifecycle should remain local-first rather than being forced into Nightscout treatments.
-- Detailed Apple Health/Watch data should remain in HealthKit/local derived context; useful workout summaries can optionally be mirrored to Nightscout activity.
-- Nightscout API v3 paging/history and stable identifiers are useful for historical replay and idempotent synchronization.
-- Use a dedicated least-privilege Nightscout token stored in Keychain rather than embedding the full API secret.
-- V7 backup/export should eventually include the new local Attention data so it remains portable even when Nightscout mirrors are incomplete.
-- Raw health data, Nightscout exports and credentials stay out of Git.
-
-The practical split is: **standard diabetes facts sync to Nightscout; app-specific attention facts stay local and may be selectively mirrored when that creates real value.**
+Nightscout should be the durable interoperability/history layer for standard diabetes facts, while Attention-specific state remains local-first. Glucose/insulin/carbs use existing xDrip + Nightscout paths; `Ate` without carbs, acknowledgements, defer/recovery states and episode lifecycle belong in local Attention data. Use least-privilege Nightscout tokens and keep raw exports/credentials out of Git.
 
 ### 08 — IOB + COB
 
-Approximate **IOB should enter the Attention Engine early; classical COB should be deferred.**
-
-- xDrip PR #366 already demonstrates a local pure-function exponential IOB calculation from existing insulin `TreatmentEntry` records. Rebuild the model cleanly for V7 rather than merging its old UIKit integration.
-- Current Loop continues to separate insulin remaining, insulin activity and glucose effect. For our use case, modeled IOB **plus current insulin activity/phase** is more useful than a single remaining-units number.
-- Trio's External Insulin workflow validates manually administered insulin entering IOB without pump delivery, which maps well to MDI.
-- Nightscout's existing BWP plugin already uses IOB to snooze/reassess high alerts when insulin is active — strong precedent for our “already acted” attention behaviour.
-- IOB must mean **modeled from recorded doses**, never proof of what was actually injected. Missing logs remain unknown.
-- V7's current treatment model stores insulin amount and time but not insulin subtype. Prefer one configured rapid-insulin action model initially rather than adding friction to every quick log; keep long-acting insulin separate.
-- Classical COB requires carb quantity, absorption assumptions, glucose response and therapy settings. That conflicts with the deliberately low-friction `Ate` action where carbs can be unknown.
-- Do not fabricate COB from `Ate`. Use meal recency/state first; add dynamic COB later only if carb-estimation and replay research show it materially improves attention decisions.
-- Historical replay should compare `time since insulin`, modeled IOB, and modeled IOB + activity to prove the extra complexity reduces unwanted nags without delaying genuinely useful attention.
-
-The practical rule is: **model recorded insulin early; preserve uncertainty around meals rather than forcing every meal into a precise COB number.**
+Approximate local **IOB should enter early; classical COB should wait**. Model recorded rapid insulin using a proven action curve and expose both remaining insulin and activity/phase internally. Use IOB to modify attention urgency, never to recommend dose. Missing logs remain unknown. Keep `Ate` useful without forcing carb precision; dynamic COB comes later only if carb estimation and replay prove value.
 
 ### 09 — meal photo + carb estimation
 
-Meal photos should be a **capture-and-confirm aid**, not an automatic dosing input.
+Meal photos should be a capture-and-confirm aid. Record `Ate` immediately, then let a pluggable vision provider propose food components, portion assumptions and an **editable carb range with uncertainty**. Confirmed carbs can become normal TreatmentEntry/Nightscout data; unconfirmed AI output remains estimated context. Start with multimodal/specialist APIs and nutrition grounding rather than training a custom model.
 
-- Do not train a custom food model for the first version. Start behind a provider-neutral `MealVisionProvider` and benchmark at least a general multimodal model against a specialist food/nutrition API on real personal meals.
-- Immediately record the `Ate` event when the photo is captured; vision/network failure must not erase the meal context.
-- Current clinical evidence shows useful performance is possible, but mixed/composite meals and portion estimation create large tail errors. Present an **editable carb range plus the biggest uncertainty**, not false single-number precision.
-- Nutrition5k is the strongest open research asset found for later nutrition/portion modeling; FoodSAM is useful segmentation research; neither is a turnkey iPhone dependency.
-- USDA FoodData Central is a strong open/public-domain nutrition grounding source. Edamam Vision is an attractive low-cost structured specialist benchmark; LogMeal is a useful higher-specialization benchmark for segmentation/quantity.
-- A general multimodal model is the fastest flexible prototype, but recognized foods should be grounded against nutrition data where practical rather than trusting free-form nutrient recall alone.
-- Only **user-confirmed** carbs should become a normal xDrip Carb `TreatmentEntry` / Nightscout treatment. Preserve unconfirmed AI output as estimated context with provenance.
-- Store provider/model version, range, assumptions and the user's correction. Those confirmed examples can later support repeated-meal retrieval and personalization.
-- Photos, raw provider payloads where unnecessary, and personal health data stay out of Git.
-- Direct photo-to-insulin dose recommendations remain out of scope.
+### 10 — Apple Health + Watch context
 
-The practical interaction is: **Photo → Ate immediately → AI suggestion → carb range + uncertainty → one-tap confirm/edit → confirmed treatment.**
+Use Apple Health narrowly at first: **recent completed workouts are the valuable signal**. Read workout type, timing, duration and optionally active energy plus workout-associated average/max HR, normalize to a small `RecentExerciseContext`, and feed that to replay/Attention logic as a confidence/urgency modifier. Do not treat all exercise as glucose-lowering; aerobic and high-intensity/resistance activity can differ materially. Existing V7 HealthKit code only exports glucose, so add a separate read-side `HealthContextProvider`. HealthKit background delivery can help after workouts are saved but is not a guaranteed live Watch feed. Keep manual Exercise as the immediate fallback. Defer raw HR, step-count detection, sleep stages, resting HR and HRV to later personalization unless personal data proves incremental value.
 
 ## Working product hypothesis
 
@@ -174,7 +96,7 @@ A future Attention Engine should be able to consider signals such as:
 - recent meal / Ate event
 - recent insulin and approximate IOB
 - low/recovery state
-- exercise/activity context
+- recent exercise context
 - prior alerts and acknowledgements
 - whether the user has explicitly said they are handling the situation
 
