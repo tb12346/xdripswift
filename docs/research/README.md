@@ -34,8 +34,8 @@ For every research pass, capture:
 | 06 | [Historical replay + backtesting](./06-historical-replay.md) | **Complete** | How can we tune alert logic against real historical CGM/treatment data? |
 | 07 | [Nightscout API + data storage](./07-nightscout-api-data.md) | **Complete** | What can Nightscout store, and which data should remain local? |
 | 08 | [Insulin-on-board + carbs-on-board](./08-iob-cob.md) | **Complete** | How early should approximate IOB/COB become part of context? |
-| 09 | Meal photo recognition + carb estimation | **Next** | Open source, API, or multimodal model for a personal prototype? |
-| 10 | Apple Health + Watch context | Not started | Which exercise, sleep, HR and activity signals are useful and accessible? |
+| 09 | [Meal photo recognition + carb estimation](./09-meal-photo-carb-estimation.md) | **Complete** | Open source, API, or multimodal model for a personal prototype? |
+| 10 | Apple Health + Watch context | **Next** | Which exercise, sleep, HR and activity signals are useful and accessible? |
 | 11 | Future personalised data model | Not started | What should we start recording from day one to support later learning? |
 | 12 | Prediction + personalisation approaches | Not started | What existing forecasting approaches are worth adapting later? |
 | 13 | Safety + failure modes | Not started | Where must the system become conservative or avoid false certainty? |
@@ -144,6 +144,23 @@ Approximate **IOB should enter the Attention Engine early; classical COB should 
 - Historical replay should compare `time since insulin`, modeled IOB, and modeled IOB + activity to prove the extra complexity reduces unwanted nags without delaying genuinely useful attention.
 
 The practical rule is: **model recorded insulin early; preserve uncertainty around meals rather than forcing every meal into a precise COB number.**
+
+### 09 — meal photo + carb estimation
+
+Meal photos should be a **capture-and-confirm aid**, not an automatic dosing input.
+
+- Do not train a custom food model for the first version. Start behind a provider-neutral `MealVisionProvider` and benchmark at least a general multimodal model against a specialist food/nutrition API on real personal meals.
+- Immediately record the `Ate` event when the photo is captured; vision/network failure must not erase the meal context.
+- Current clinical evidence shows useful performance is possible, but mixed/composite meals and portion estimation create large tail errors. Present an **editable carb range plus the biggest uncertainty**, not false single-number precision.
+- Nutrition5k is the strongest open research asset found for later nutrition/portion modeling; FoodSAM is useful segmentation research; neither is a turnkey iPhone dependency.
+- USDA FoodData Central is a strong open/public-domain nutrition grounding source. Edamam Vision is an attractive low-cost structured specialist benchmark; LogMeal is a useful higher-specialization benchmark for segmentation/quantity.
+- A general multimodal model is the fastest flexible prototype, but recognized foods should be grounded against nutrition data where practical rather than trusting free-form nutrient recall alone.
+- Only **user-confirmed** carbs should become a normal xDrip Carb `TreatmentEntry` / Nightscout treatment. Preserve unconfirmed AI output as estimated context with provenance.
+- Store provider/model version, range, assumptions and the user's correction. Those confirmed examples can later support repeated-meal retrieval and personalization.
+- Photos, raw provider payloads where unnecessary, and personal health data stay out of Git.
+- Direct photo-to-insulin dose recommendations remain out of scope.
+
+The practical interaction is: **Photo → Ate immediately → AI suggestion → carb range + uncertainty → one-tap confirm/edit → confirmed treatment.**
 
 ## Working product hypothesis
 
