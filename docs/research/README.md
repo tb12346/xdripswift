@@ -32,14 +32,15 @@ For every research pass, capture:
 | 04 | [Low-friction meal/treatment logging on iOS](./04-low-friction-logging.md) | **Complete** | What is the fastest reliable way to log Ate, insulin and acknowledgements? |
 | 05 | [iOS notification + background constraints](./05-ios-background-constraints.md) | **Complete** | What attention-engine behaviours are actually possible on iPhone and Watch? |
 | 06 | [Historical replay + backtesting](./06-historical-replay.md) | **Complete** | How can we tune alert logic against real historical CGM/treatment data? |
-| 07 | Insulin-on-board + carbs-on-board | **Next** | How early should approximate IOB/COB become part of context? |
-| 08 | Meal photo recognition + carb estimation | Not started | Open source, API, or multimodal model for a personal prototype? |
-| 09 | Apple Health + Watch context | Not started | Which exercise, sleep, HR and activity signals are useful and accessible? |
-| 10 | Future personalised data model | Not started | What should we start recording from day one to support later learning? |
-| 11 | Prediction + personalisation approaches | Not started | What existing forecasting approaches are worth adapting later? |
-| 12 | Safety + failure modes | Not started | Where must the system become conservative or avoid false certainty? |
-| 13 | Personal-use deployment | Not started | How do we make builds easy to install, update and run alongside Zukka? |
-| 14 | Licensing + future distribution boundary | Not started | What changes if this moves beyond private personal use? |
+| 07 | [Nightscout API + data storage](./07-nightscout-api-data.md) | **Complete** | What can Nightscout store, and which data should remain local? |
+| 08 | Insulin-on-board + carbs-on-board | **Next** | How early should approximate IOB/COB become part of context? |
+| 09 | Meal photo recognition + carb estimation | Not started | Open source, API, or multimodal model for a personal prototype? |
+| 10 | Apple Health + Watch context | Not started | Which exercise, sleep, HR and activity signals are useful and accessible? |
+| 11 | Future personalised data model | Not started | What should we start recording from day one to support later learning? |
+| 12 | Prediction + personalisation approaches | Not started | What existing forecasting approaches are worth adapting later? |
+| 13 | Safety + failure modes | Not started | Where must the system become conservative or avoid false certainty? |
+| 14 | Personal-use deployment | Not started | How do we make builds easy to install, update and run alongside Zukka? |
+| 15 | Licensing + future distribution boundary | Not started | What changes if this moves beyond private personal use? |
 
 ## Findings worth carrying forward
 
@@ -110,6 +111,23 @@ Historical replay should test the **attention experience**, not merely glucose-p
 - Replay can de-risk policy choices but cannot prove a counterfactual alert would improve TIR; that requires prospective use.
 
 A small manually reviewed set of historical episodes may be especially valuable because “I would have wanted attention here” is stronger ground truth for this product than glucose outcomes alone.
+
+### 07 — Nightscout API + data storage
+
+Nightscout should be a **durable interoperability and history layer**, not the runtime source of truth for Attention Engine state.
+
+- Standard glucose, insulin and carb data should continue to use xDrip's existing `BgReading` / `TreatmentEntry` model and Nightscout `entries` / `treatments` sync.
+- Nightscout also has a `food` collection for reusable nutrition definitions and an `activity` collection for activity records, although activity currently sits outside the generic API v3 collection set.
+- Current Nightscout storage often preserves additional client fields, but arbitrary custom fields should not be treated as a stable cross-client protocol contract.
+- `Ate` with an unknown carb amount is meaningful data and must not be represented as `carbs = 0`; it should be a local `AttentionEvent` immediately, with a treatment added later if nutrition is confirmed.
+- `No insulin needed`, `Waiting for recovery`, reminder/defer actions, acknowledgements and Attention Episode lifecycle should remain local-first rather than being forced into Nightscout treatments.
+- Detailed Apple Health/Watch data should remain in HealthKit/local derived context; useful workout summaries can optionally be mirrored to Nightscout activity.
+- Nightscout API v3 paging/history and stable identifiers are useful for historical replay and idempotent synchronization.
+- Use a dedicated least-privilege Nightscout token stored in Keychain rather than embedding the full API secret.
+- V7 backup/export should eventually include the new local Attention data so it remains portable even when Nightscout mirrors are incomplete.
+- Raw health data, Nightscout exports and credentials stay out of Git.
+
+The practical split is: **standard diabetes facts sync to Nightscout; app-specific attention facts stay local and may be selectively mirrored when that creates real value.**
 
 ## Working product hypothesis
 
