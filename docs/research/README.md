@@ -31,8 +31,8 @@ For every research pass, capture:
 | 03 | [Other diabetes apps: attention + alert patterns](./03-other-diabetes-apps.md) | **Complete** | What should we borrow from Loop, Trio/iAPS, AAPS, xDrip+ and related tools? |
 | 04 | [Low-friction meal/treatment logging on iOS](./04-low-friction-logging.md) | **Complete** | What is the fastest reliable way to log Ate, insulin and acknowledgements? |
 | 05 | [iOS notification + background constraints](./05-ios-background-constraints.md) | **Complete** | What attention-engine behaviours are actually possible on iPhone and Watch? |
-| 06 | Historical replay + backtesting | **Next** | How can we tune alert logic against real historical CGM/treatment data? |
-| 07 | Insulin-on-board + carbs-on-board | Not started | How early should approximate IOB/COB become part of context? |
+| 06 | [Historical replay + backtesting](./06-historical-replay.md) | **Complete** | How can we tune alert logic against real historical CGM/treatment data? |
+| 07 | Insulin-on-board + carbs-on-board | **Next** | How early should approximate IOB/COB become part of context? |
 | 08 | Meal photo recognition + carb estimation | Not started | Open source, API, or multimodal model for a personal prototype? |
 | 09 | Apple Health + Watch context | Not started | Which exercise, sleep, HR and activity signals are useful and accessible? |
 | 10 | Future personalised data model | Not started | What should we start recording from day one to support later learning? |
@@ -93,6 +93,23 @@ The Attention Engine is technically viable on iOS **if it is event-driven rather
 - Attention Episode state must be persisted and evaluation must be idempotent across suspension, relaunch and duplicate callbacks.
 
 The key operating principle is: **react to fresh evidence, persist context, schedule conservative time guards, and never rely on periodic background execution.**
+
+### 06 — historical replay + backtesting
+
+Historical replay should test the **attention experience**, not merely glucose-prediction error. The right unit is a complete Attention Episode: when it begins, whether/when the user would be interrupted, how often alerts repeat, how treatment/context changes the policy, and how the episode resolves.
+
+- Build a deterministic discrete-event replay runner around the **same pure Swift Attention Engine used live**; do not maintain a second Python implementation of the rules.
+- Feed chronological glucose/treatment/user events plus synthetic policy deadlines into a fake clock and emit a full decision trace.
+- Score interruptions/day, repeats/episode, first-alert timing, post-treatment nags, silent recoveries, stale-data handling and other episode-level metrics.
+- Compare static/fixed-snooze and naive contextual baselines with the full Attention policy; later add IOB and signal ablations.
+- Optimise the trade-off between earlier useful attention and fewer interruptions rather than one “accuracy” score.
+- Use chronological/walk-forward tuning with a holdout period; avoid random time-series splits and brittle threshold overfitting.
+- Historical missing treatment records remain **unknown**, not proof no insulin was taken.
+- Nightscout and V7's selectable BG/treatment backup are viable data routes behind a normalisation layer.
+- Raw personal health history must stay out of Git; turn representative episodes into privacy-safe regression fixtures.
+- Replay can de-risk policy choices but cannot prove a counterfactual alert would improve TIR; that requires prospective use.
+
+A small manually reviewed set of historical episodes may be especially valuable because “I would have wanted attention here” is stronger ground truth for this product than glucose outcomes alone.
 
 ## Working product hypothesis
 
