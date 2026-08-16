@@ -27,9 +27,9 @@ For every research pass, capture:
 | # | Research area | Status | Main decision |
 |---|---|---|---|
 | 01 | [xDrip upstream PR + issue archaeology](./01-xdrip-upstream.md) | **Complete** | What existing alert, snooze, logging, widget and Watch work can we reuse? |
-| 02 | V7 readiness + migration path | Not started | Stable 6.x, V7, or a deliberately portable hybrid? |
-| 03 | Other diabetes apps: attention + alert patterns | Not started | What should we borrow from Loop, Trio/iAPS, AAPS, xDrip+ and related tools? |
-| 04 | Low-friction meal/treatment logging on iOS | Not started | What is the fastest reliable way to log Ate, insulin and acknowledgements? |
+| 02 | [V7 readiness + migration path](./02-v7-readiness.md) | **Complete** | Stable 6.x, V7, or a deliberately portable hybrid? |
+| 03 | [Other diabetes apps: attention + alert patterns](./03-other-diabetes-apps.md) | **Complete** | What should we borrow from Loop, Trio/iAPS, AAPS, xDrip+ and related tools? |
+| 04 | [Low-friction meal/treatment logging on iOS](./04-low-friction-logging.md) | **Complete** | What is the fastest reliable way to log Ate, insulin and acknowledgements? |
 | 05 | iOS notification + background constraints | Not started | What attention-engine behaviours are actually possible on iPhone and Watch? |
 | 06 | Historical replay + backtesting | Not started | How can we tune alert logic against real historical CGM/treatment data? |
 | 07 | Insulin-on-board + carbs-on-board | Not started | How early should approximate IOB/COB become part of context? |
@@ -41,26 +41,44 @@ For every research pass, capture:
 | 13 | Personal-use deployment | Not started | How do we make builds easy to install, update and run alongside Zukka? |
 | 14 | Licensing + future distribution boundary | Not started | What changes if this moves beyond private personal use? |
 
-## Findings already worth carrying forward
-
-### Fork scan
-
-The first fork scan found that most forks are snapshots, upstream syncs, or build/distribution variants rather than substantially different products. The high-signal findings were:
-
-- **`mpereiragu/xdripswift-predict`** — useful prediction architecture, predictive alerts, local/remote separation, learning/evaluation logic, and especially walk-forward historical backtesting.
-- **Historical local Insulin-on-Board branch** — useful reference for on-device IOB based on logged boluses and configurable insulin activity parameters; too old to merge directly, but relevant to the future Attention Engine.
-- **Paul Plant calibration-assistant experiment** — useful interaction pattern: turn multiple noisy glucose/context signals into a simple recommendation rather than making the user interpret all inputs manually.
-- No scanned fork appeared to implement the intended core Attention Engine: unresolved meal state + action awareness + glucose trajectory + adaptive escalation/snoozing + explicit user acknowledgement.
+## Findings worth carrying forward
 
 ### 01 — xDrip upstream archaeology
 
-Upstream already has most of the delivery and data primitives we need: mature alarms and snoozing, contextual Fast Rise/Drop gates, rich notifications, treatment storage/sync, Home Screen Quick Actions and App Intent/Siri precedent. The important missing layer is **persistent episode context** — knowing that the user ate, acted, deliberately deferred action, or is already handling a situation.
+xDrip already has most of the delivery and data primitives we need: mature alarms and snoozing, contextual Fast Rise/Drop gates, rich notifications, treatment storage/sync, Home Screen Quick Actions and App Intent/Siri precedent. The important missing layer is **persistent episode context** — knowing that the user ate, acted, deliberately deferred action, or is already handling a situation.
 
-The main architectural consequence is that our Attention Engine should sit above/beside xDrip's existing alert machinery rather than replacing it. It should evaluate an Attention Episode and decide whether to remain quiet, remind, escalate or resolve, while reusing existing notification infrastructure. See [01-xdrip-upstream.md](./01-xdrip-upstream.md).
+The Attention Engine should sit above/beside xDrip's existing alert machinery rather than replacing it. It should evaluate an Attention Episode and decide whether to remain quiet, remind, escalate or resolve, while reusing existing notification infrastructure.
 
-### V7
+### 02 — V7 readiness
 
-V7 is active development and is useful to study, but should not yet be assumed to be a stable sole foundation. A promising strategy is to keep new domain logic portable so it can start on stable 6.x if needed and migrate to V7 later without being rewritten. Research pass 02 will make this decision more concrete.
+V7 should be the **preferred technical base after a short build/device qualification gate**. The key reason is architectural: `RootApplicationCoordinator` separates long-lived services from SwiftUI presentation, which gives the Attention Engine a much cleaner integration seam than the 6.x `RootViewController` architecture.
+
+The domain engine should still remain pure/testable behind protocols so that backend work can survive V7 churn or temporarily run in 6.x if qualification fails. Avoid investing in substantial 6.x UIKit/storyboard UI.
+
+### 03 — other diabetes apps
+
+The core product idea is differentiated, but many pieces already exist separately:
+
+- xDrip+ validates direction-aware smart snoozing and pre-emptive “already treated” suppression;
+- Loop validates separating meal state from insulin state and includes missed-meal detection;
+- Trio/iAPS validate unannounced-meal logic and treatment-state reasoning;
+- Trio explicitly supports external insulin entering IOB, highly relevant for MDI;
+- AAPS validates multi-signal context, short re-alert cycles and data-quality gating.
+
+The opportunity is not to invent new diabetes physiology, but to combine proven contextual signals into a simpler MDI-focused system whose job is **“does this need my attention?”** rather than automated dosing.
+
+### 04 — low-friction logging
+
+The strongest interaction architecture is **one shared domain-action layer with multiple system adapters**.
+
+- Proactive actions such as `Ate` and `Log insulin` should be App Intents.
+- Reactive actions should primarily live on the Attention notification itself.
+- Notification text-input actions can collect insulin amounts without opening the app and can also work via Apple Watch dictation.
+- iOS 18+ WidgetKit Controls are a better locked-phone one-tap surface for `Ate` than ordinary interactive widgets.
+- Ordinary widget/Live Activity buttons require authentication/unlock and cannot resolve missing parameters at tap time, making them weaker for arbitrary insulin entry.
+- V7 already has the core seams: App Intents, central notification handling, AlertManager actions, Watch notification UI and WidgetKit.
+
+A useful product challenge emerged: `Handling it` may be too vague to expose everywhere once more specific states exist (`insulin logged`, `no insulin needed`, `waiting for recovery`, `remind me`). Fewer, more meaningful actions should reduce cognitive load.
 
 ## Working product hypothesis
 
