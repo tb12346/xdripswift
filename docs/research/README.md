@@ -38,8 +38,8 @@ For every research pass, capture:
 | 10 | [Apple Health + Watch context](./10-apple-health-watch-context.md) | **Complete** | Which exercise, sleep, HR and activity signals are useful and accessible? |
 | 11 | [Future personalised data model](./11-personalised-data-model.md) | **Complete** | What should we start recording from day one to support later learning? |
 | 12 | [Prediction + personalisation approaches](./12-prediction-personalisation.md) | **Complete** | What existing forecasting and learning approaches are worth adapting, and what should personalisation actually predict? |
-| 13 | Safety + failure modes | **Next** | Where must the system become conservative or avoid false certainty? |
-| 14 | Personal-use deployment | Not started | How do we make builds easy to install, update and run alongside Zukka? |
+| 13 | [Safety + failure modes](./13-safety-failure-modes.md) | **Complete** | Where must the system become conservative or avoid false certainty? |
+| 14 | Personal-use deployment | **Next** | How do we make builds easy to install, update and run alongside Zukka? |
 | 15 | Licensing + future distribution boundary | Not started | What changes if this moves beyond private personal use? |
 
 ## Findings worth carrying forward
@@ -91,6 +91,10 @@ Build personalization on an **honest event history rather than permanent derived
 ### 12 — prediction + personalisation
 
 **Personalise the attention decision before trying to perfectly predict glucose.** Keep the deterministic Attention Engine as the decision authority, then layer in transparent personal calibration and similar historical episodes before training a learned model. Similar-episode retrieval is especially attractive for a one-person system because it is interpretable and improves naturally as history grows. When labels are sufficient, start with a small task-specific tabular model for outcomes such as unresolved rise or likely recovery; only then test a short-horizon glucose forecaster as an additional signal. Current 2026 benchmarking reinforces that foundation models can be strong with little personal data, but a lightweight supervised LSTM can still win when enough task-specific data exists, so do not assume a larger Transformer/foundation model is better. Evaluate chronologically and by clinically/product-relevant slices, use uncertainty explicitly, and promote learned models only through replay and shadow evaluation. GluPredKit is a useful MIT-licensed offline research harness with Nightscout parsing and multiple forecasting baselines, but it should stay outside the iOS runtime. Never use observational prediction to infer a safe insulin dose or causal response to a hypothetical dose.
+
+### 13 — safety + failure modes
+
+**Keep core glucose safety independent from contextual personalisation.** A small deterministic Core Safety Monitor should preserve urgent/core glucose and data-health alert paths even if the Attention Engine, Nightscout, HealthKit, meal AI or learned models fail. Contextual quieting is always bounded and reversible: every acknowledgement/defer expires, every fresh glucose re-evaluates the episode, and worsening evidence can override recent insulin, `Handling it`, `No insulin needed` or `Waiting for recovery`. Stale/missing/conflicting data reduces confidence rather than manufacturing certainty. Treat notification capability as explicit system health because a scheduled iOS notification is not proof the user heard or saw it. Learned models may abstain and fall back to deterministic policy; they never suppress the core safety island. Exact safety ceilings and thresholds belong in the product-spec/replay stage, backed by invariant tests rather than scattered constants.
 
 ## Working product hypothesis
 
