@@ -36,8 +36,8 @@ For every research pass, capture:
 | 08 | [Insulin-on-board + carbs-on-board](./08-iob-cob.md) | **Complete** | How early should approximate IOB/COB become part of context? |
 | 09 | [Meal photo recognition + carb estimation](./09-meal-photo-carb-estimation.md) | **Complete** | Open source, API, or multimodal model for a personal prototype? |
 | 10 | [Apple Health + Watch context](./10-apple-health-watch-context.md) | **Complete** | Which exercise, sleep, HR and activity signals are useful and accessible? |
-| 11 | Future personalised data model | **Next** | What should we start recording from day one to support later learning? |
-| 12 | Prediction + personalisation approaches | Not started | What existing forecasting approaches are worth adapting later? |
+| 11 | [Future personalised data model](./11-personalised-data-model.md) | **Complete** | What should we start recording from day one to support later learning? |
+| 12 | Prediction + personalisation approaches | **Next** | What existing forecasting approaches are worth adapting later? |
 | 13 | Safety + failure modes | Not started | Where must the system become conservative or avoid false certainty? |
 | 14 | Personal-use deployment | Not started | How do we make builds easy to install, update and run alongside Zukka? |
 | 15 | Licensing + future distribution boundary | Not started | What changes if this moves beyond private personal use? |
@@ -82,7 +82,11 @@ Meal photos should be a capture-and-confirm aid. Record `Ate` immediately, then 
 
 ### 10 — Apple Health + Watch context
 
-Use Apple Health narrowly at first: **recent completed workouts are the valuable signal**. Read workout type, timing, duration and optionally active energy plus workout-associated average/max HR, normalize to a small `RecentExerciseContext`, and feed that to replay/Attention logic as a confidence/urgency modifier. Do not treat all exercise as glucose-lowering; aerobic and high-intensity/resistance activity can differ materially. Existing V7 HealthKit code only exports glucose, so add a separate read-side `HealthContextProvider`. HealthKit background delivery can help after workouts are saved but is not a guaranteed live Watch feed. Keep manual Exercise as the immediate fallback. Defer raw HR, step-count detection, sleep stages, resting HR and HRV to later personalization unless personal data proves incremental value.
+Use Apple Health narrowly at first: **recent completed workouts are the valuable signal**. Read workout type, timing, duration and optionally active energy plus workout-associated average/max HR, normalize to a small `RecentExerciseContext`, and feed that to replay/Attention logic as a confidence/urgency modifier. Do not treat all exercise as glucose-lowering; aerobic and high-intensity/resistance activity can differ materially. Existing V7 HealthKit code only exports glucose, so add a separate read-side `HealthContextProvider`. HealthKit background delivery can help after workouts are saved but is not a guaranteed live Watch feed. Keep manual Exercise first-class because Watch workouts will not always be logged. HealthKit glucose read-back is unnecessary in the intended architecture because xDrip/Zukka is already the source writing those readings to HealthKit.
+
+### 11 — future personalised data model
+
+Build personalization on an **honest event history rather than permanent derived features**. Keep xDrip `BgReading` and `TreatmentEntry` canonical; add a separate local `AttentionStore` for Ate, manual exercise, acknowledgements, defer/recovery actions, meal estimates/corrections, episode state and decision-changing events. Every new event should preserve `occurredAt` and `recordedAt`, structured provenance/source, certainty, linkage and revision information. Manual exercise remains first-class and can later be enriched/reconciled with overlapping HealthKit workouts rather than replaced. Keep original AI estimates when users correct them, version policies/models/configuration, retain timezone-at-occurrence for circadian learning, and recompute features such as IOB/exercise recency under future models. Avoid duplicated HealthKit glucose, raw Watch sensor archives and “collect everything for ML.” The principle is: **store facts, uncertainty and provenance; derive intelligence later.**
 
 ## Working product hypothesis
 
