@@ -40,7 +40,9 @@ For every research pass, capture:
 | 12 | [Prediction + personalisation approaches](./12-prediction-personalisation.md) | **Complete** | What existing forecasting and learning approaches are worth adapting, and what should personalisation actually predict? |
 | 13 | [Safety + failure modes](./13-safety-failure-modes.md) | **Complete** | Where must the system become conservative or avoid false certainty? |
 | 14 | [Personal-use deployment](./14-personal-use-deployment.md) | **Complete** | How do we make builds easy to install, update and run alongside Zukka? |
-| 15 | Licensing + future distribution boundary | **Next** | What changes if this moves beyond private personal use? |
+| 15 | [Licensing + future distribution boundary](./15-licensing-distribution-boundary.md) | **Complete** | What changes if this moves beyond private personal use? |
+
+**Research phase status: Complete.** The next phase is product specification, followed by implementation and real-device qualification.
 
 ## Findings worth carrying forward
 
@@ -99,6 +101,10 @@ Build personalization on an **honest event history rather than permanent derived
 ### 14 — personal-use deployment
 
 **Start with a paid-team Xcode shadow build, not a sensor cutover.** Give the custom V7 app one stable, unique bundle identity so it can live beside Zukka and preserve its own local data across rebuilds; use V7's existing xcconfig override and derived Watch/widget/notification identifiers rather than hand-editing every target. During qualification, keep Zukka as the existing CGM/safety path and run the custom app as a Nightscout Follower, with duplicate HealthKit writes, Nightscout uploads and generic alarms disabled or tightly controlled. Direct Xcode is the best active-development channel; an internal TestFlight build can later become the Mac-independent stable/recovery channel, but the current Fastlane workflow must first be adapted for custom branches/bundle identity rather than allowed to auto-sync upstream blindly. Watch, widgets, notifications, background behaviour, data persistence and backup/recovery are all part of the deployment gate before the custom app becomes a daily primary app.
+
+### 15 — licensing + future distribution boundary
+
+**Private personal development is the easy legal/licensing mode; giving the app to another person is a deliberate boundary.** xDrip is GPLv3, so private modifications may remain private, but any supplied binary to another party should be treated as GPL distribution with exact corresponding source and downstream GPL rights. A central public Apple distribution has a real licence tension because Apple's required end-user terms include non-transferability while GPLv3 prohibits further restrictions; do not assume a custom EULA solves this. Separately, open source/free distribution does not exempt medical software from regulation: current MHRA guidance says software intended to influence treatment dose, **time** or type is most likely a medical device, so even an Attention Engine with no dose calculator may need formal classification if publicly offered for diabetes management. Preserve future optionality by keeping genuinely original decision logic pure and xDrip-independent, while treating any future release to another person as a new workstream covering GPL, Apple terms, intended purpose/regulatory classification, privacy, evidence and ongoing safety obligations.
 
 ## Working product hypothesis
 
