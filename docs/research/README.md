@@ -39,8 +39,8 @@ For every research pass, capture:
 | 11 | [Future personalised data model](./11-personalised-data-model.md) | **Complete** | What should we start recording from day one to support later learning? |
 | 12 | [Prediction + personalisation approaches](./12-prediction-personalisation.md) | **Complete** | What existing forecasting and learning approaches are worth adapting, and what should personalisation actually predict? |
 | 13 | [Safety + failure modes](./13-safety-failure-modes.md) | **Complete** | Where must the system become conservative or avoid false certainty? |
-| 14 | Personal-use deployment | **Next** | How do we make builds easy to install, update and run alongside Zukka? |
-| 15 | Licensing + future distribution boundary | Not started | What changes if this moves beyond private personal use? |
+| 14 | [Personal-use deployment](./14-personal-use-deployment.md) | **Complete** | How do we make builds easy to install, update and run alongside Zukka? |
+| 15 | Licensing + future distribution boundary | **Next** | What changes if this moves beyond private personal use? |
 
 ## Findings worth carrying forward
 
@@ -95,6 +95,10 @@ Build personalization on an **honest event history rather than permanent derived
 ### 13 — safety + failure modes
 
 **Keep core glucose safety independent from contextual personalisation.** A small deterministic Core Safety Monitor should preserve urgent/core glucose and data-health alert paths even if the Attention Engine, Nightscout, HealthKit, meal AI or learned models fail. Contextual quieting is always bounded and reversible: every acknowledgement/defer expires, every fresh glucose re-evaluates the episode, and worsening evidence can override recent insulin, `Handling it`, `No insulin needed` or `Waiting for recovery`. Stale/missing/conflicting data reduces confidence rather than manufacturing certainty. Treat notification capability as explicit system health because a scheduled iOS notification is not proof the user heard or saw it. Learned models may abstain and fall back to deterministic policy; they never suppress the core safety island. Exact safety ceilings and thresholds belong in the product-spec/replay stage, backed by invariant tests rather than scattered constants.
+
+### 14 — personal-use deployment
+
+**Start with a paid-team Xcode shadow build, not a sensor cutover.** Give the custom V7 app one stable, unique bundle identity so it can live beside Zukka and preserve its own local data across rebuilds; use V7's existing xcconfig override and derived Watch/widget/notification identifiers rather than hand-editing every target. During qualification, keep Zukka as the existing CGM/safety path and run the custom app as a Nightscout Follower, with duplicate HealthKit writes, Nightscout uploads and generic alarms disabled or tightly controlled. Direct Xcode is the best active-development channel; an internal TestFlight build can later become the Mac-independent stable/recovery channel, but the current Fastlane workflow must first be adapted for custom branches/bundle identity rather than allowed to auto-sync upstream blindly. Watch, widgets, notifications, background behaviour, data persistence and backup/recovery are all part of the deployment gate before the custom app becomes a daily primary app.
 
 ## Working product hypothesis
 
