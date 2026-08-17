@@ -37,8 +37,8 @@ For every research pass, capture:
 | 09 | [Meal photo recognition + carb estimation](./09-meal-photo-carb-estimation.md) | **Complete** | Open source, API, or multimodal model for a personal prototype? |
 | 10 | [Apple Health + Watch context](./10-apple-health-watch-context.md) | **Complete** | Which exercise, sleep, HR and activity signals are useful and accessible? |
 | 11 | [Future personalised data model](./11-personalised-data-model.md) | **Complete** | What should we start recording from day one to support later learning? |
-| 12 | Prediction + personalisation approaches | **Next** | What existing forecasting approaches are worth adapting later? |
-| 13 | Safety + failure modes | Not started | Where must the system become conservative or avoid false certainty? |
+| 12 | [Prediction + personalisation approaches](./12-prediction-personalisation.md) | **Complete** | What existing forecasting and learning approaches are worth adapting, and what should personalisation actually predict? |
+| 13 | Safety + failure modes | **Next** | Where must the system become conservative or avoid false certainty? |
 | 14 | Personal-use deployment | Not started | How do we make builds easy to install, update and run alongside Zukka? |
 | 15 | Licensing + future distribution boundary | Not started | What changes if this moves beyond private personal use? |
 
@@ -88,6 +88,10 @@ Use Apple Health narrowly at first: **recent completed workouts are the valuable
 
 Build personalization on an **honest event history rather than permanent derived features**. Keep xDrip `BgReading` and `TreatmentEntry` canonical; add a separate local `AttentionStore` for Ate, manual exercise, acknowledgements, defer/recovery actions, meal estimates/corrections, episode state and decision-changing events. Every new event should preserve `occurredAt` and `recordedAt`, structured provenance/source, certainty, linkage and revision information. Manual exercise remains first-class and can later be enriched/reconciled with overlapping HealthKit workouts rather than replaced. Keep original AI estimates when users correct them, version policies/models/configuration, retain timezone-at-occurrence for circadian learning, and recompute features such as IOB/exercise recency under future models. Avoid duplicated HealthKit glucose, raw Watch sensor archives and “collect everything for ML.” The principle is: **store facts, uncertainty and provenance; derive intelligence later.**
 
+### 12 — prediction + personalisation
+
+**Personalise the attention decision before trying to perfectly predict glucose.** Keep the deterministic Attention Engine as the decision authority, then layer in transparent personal calibration and similar historical episodes before training a learned model. Similar-episode retrieval is especially attractive for a one-person system because it is interpretable and improves naturally as history grows. When labels are sufficient, start with a small task-specific tabular model for outcomes such as unresolved rise or likely recovery; only then test a short-horizon glucose forecaster as an additional signal. Current 2026 benchmarking reinforces that foundation models can be strong with little personal data, but a lightweight supervised LSTM can still win when enough task-specific data exists, so do not assume a larger Transformer/foundation model is better. Evaluate chronologically and by clinically/product-relevant slices, use uncertainty explicitly, and promote learned models only through replay and shadow evaluation. GluPredKit is a useful MIT-licensed offline research harness with Nightscout parsing and multiple forecasting baselines, but it should stay outside the iOS runtime. Never use observational prediction to infer a safe insulin dose or causal response to a hypothetical dose.
+
 ## Working product hypothesis
 
 The central problem is not simply calculating insulin. It is deciding **when diabetes genuinely needs the user's attention** and handling the rest with as little cognitive overhead as possible.
@@ -103,5 +107,6 @@ A future Attention Engine should be able to consider signals such as:
 - recent exercise context
 - prior alerts and acknowledgements
 - whether the user has explicitly said they are handling the situation
+- later: personal historical calibration, similar-episode evidence and learned risk signals
 
 and translate them into a simple attention decision rather than exposing every raw signal.
