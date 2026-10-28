@@ -37,7 +37,7 @@ Code existing, checks passing, installation and user opt-in are separate facts.
 | ID | Outcome | Status | Completion gate |
 | --- | --- | --- | --- |
 | M0 | Isolated live phone companion | verified | Signed install, live journal, restart and one lock/unlock cycle passed. Longer observation belongs to M4. |
-| M1 | Optional Attention notifications + Open into quick logging | implemented | 39 targeted simulator tests pass; signed phone build and visible OS notification/Open checks underway. Default off; user opt-in is separate. |
+| M1 | Optional Attention notifications + Open into quick logging | implemented | 39 targeted simulator tests and 11 packaging checks pass; signed build installed/launched on phone, history and live recording preserved. Visible OS notification/Open check awaits Mac unlock. Live opt-in remains off. |
 | M2 | Remind 10m + reassessment/cancellation | todo | Existing UX choice, not a clinical threshold. OS-owned backstop; worsening can interrupt earlier; convincing recovery cancels; stale-data wording cannot imply a fresh assessment. Persist reminder intent across restart. |
 | M3 | One-app logging and reliable Nightscout sync | todo | Appropriate write access; create/edit/undo/retry/deduplication verified with mocks, then an explicitly authorized real treatment round trip. Preserve Ate/Exercise mirroring. No fake real-account records. |
 | M4 | Reliable daily companion and usefulness review | todo | Longer foreground/background/locked/network-loss/reboot use; honest gap/storage indicators; battery, permissions, renewal and notification overlap checked. Review actual interruptions and response effort. |
@@ -57,8 +57,8 @@ priority follows use of the core response loop; they are not implied by M1.
 - [x] Preserve existing categories, core alert routing, sounds and snooze settings.
 - [x] Authenticated Open routes to existing quick logger without prefilling an amount or writing a treatment; visible OS route check remains below.
 - [x] Show scheduling/permission/error status without claiming confirmed delivery.
-- [ ] Fake-transport and policy tests, simulator build/run, signed phone update.
-- [ ] Record physical validation and user opt-in separately; install with delivery off.
+- [x] Fake-transport and policy tests, simulator build/run, signed phone update.
+- [ ] Verify visible OS notification/Open interaction; record physical notification validation and user opt-in separately. Installed with delivery off.
 
 ## Boundaries and architecture
 
@@ -125,3 +125,18 @@ no skips). Frozen fingerprints remain unchanged. Simulator launch succeeded, but
 the Mac lock blocked visible OS notification/Open verification; user unlock was
 requested while signed build work continued. M1 is implemented, not yet fully
 device-verified or enabled. Next: complete these checks, then M2 reminders.
+
+### 2026-10-28 — M1 phone update installed; visible check pending
+
+Signed build, bundle isolation and signature verification passed; 11 packaging
+checks also passed. The app was updated in place and launched on the phone.
+A private journal check confirmed the complete previous prefix was preserved
+and fresh observations continued. Attention opt-in was not enabled. The labelled
+setup test can be invoked in Treatments → waveform → Attention notifications;
+it is independent of live opt-in and writes no health events.
+
+The Mac remained locked, so real banner rendering and tapping Open into the
+logger could not be visually verified. Automated routing tests are not a
+substitute for that check. User unlock was requested; finish it before claiming
+M1 verified. Then implement M2, not another research/packaging detour. App source
+changes remain in the V7 dirty worktree; only curated product docs are published.
